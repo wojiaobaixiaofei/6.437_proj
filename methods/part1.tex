@@ -6,6 +6,8 @@
 \usepackage{amsthm}
 \usepackage{amsfonts}
 \usepackage{amssymb}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
 
 \newtheorem{thm}{Theorem}
 \newtheorem{lm}{Lemma}
@@ -26,8 +28,11 @@
 \newcommand\E[0]{\mathbb{E}}
 \newcommand\R[0]{\mathbb{R}}
 
-\begin{document}
+\makeatletter
+\def\BState{\State\hskip-\ALG@thistlm}
+\makeatother
 
+\begin{document}
 %-----------------------------------------------
 \problem{}
 	We consider the following cdeciphering problem. Let $\mathbf{X}$ be a random variable representing the plaintext corresponding to an observed ciphertext $\mathbf{Y}$, where $\mathbf{Y} = f(\mathbf{X})$ and $f:\mathcal{A} \rightarrow \mathcal{A}$ is a permutation of the English alphabet $\mathcal{A}$, which includes lowercase letters, spaces, and periods. 
@@ -55,14 +60,76 @@
 		Let $\mathcal{C}$ be the space of permutations of $\mathcal{A}$. Then, $\abs{\mathcal{C}} = \abs{\mathcal{A}}!$, so that $p_F(f) = \frac{1}{\abs{\mathcal{A}}!}$ for all $f$, and we can write 
 		\begin{align}
 			p_{F|\mathbf{Y}}(f|\mathbf{y}) &= \frac{p_{\mathbf{Y}|F}(\mathbf{y}|f)p_F(f)}{p_\mathbf{Y}(\mathbf{y})} \\
-			&= \frac{1}{\abs{\mathcal{A}}!} \frac{(p_\mathbf{X} \circ f^{-1})(\mathbf{y})}{\sum_{f \in \mathcal{C}}(p_\mathbf{X} \circ f^{-1})(\mathbf{y})}
+			&= \frac{1}{\abs{\mathcal{A}}!} \frac{(p_\mathbf{X} \circ f^{-1})(\mathbf{y})}{\sum_{f \in \mathcal{C}}(p_\mathbf{X} \circ f^{-1})(\mathbf{y})}\;. \label{one}
+		\end{align}
+		We can further express the likelihood $(p_\mathbf{X} \circ f^{-1})(\mathbf{y})$ as follows. Let $\mathbf{x} = f^{-1}(\mathbf{y})$; then, 
+		\begin{align}
+			 (p_\mathbf{X} \circ f^{-1})(\mathbf{y}) &= p_{\mathbf{X}}(\mathbf{x}) \\
+			 &= P(x_1) \prod_{k = 2}^K \prob(X_{k} = x_k\;|\;X_{k-1} x_{k-1}) \\
+			 &= P(x_1) \prod_{k = 2}^K M_{x_k,x_{k-1}} \label{two}
 		\end{align}
 	\part
-		The normalization $p_\mathbf{Y}(\mathbf{y}) = \sum_{f \in \mathcal{C}}(p_\mathbf{X} \circ f^{-1})(\mathbf{y})$ is impractical to calculate, since it involves the evaluation and summation of $\abs{A}! = 28! \approx 10^{29}$ terms.  
+		The normalization $p_\mathbf{Y}(\mathbf{y}) = \sum_{f \in \mathcal{C}}(p_\mathbf{X} \circ f^{-1})(\mathbf{y})$ is impractical to calculate, since it involves the evaluation and summation of $\abs{A}! = 28! \approx 10^{29}$ terms. 
 %-----------------------------------------------
 \problem{}
-	
+	We develop some of the necessary structure to apply Markov-Chain Monte Carlo to the ciphering problem. 
 \solution
+	\part
+		There are $\frac{\abs{\mathcal{A}}(\abs{\mathcal{A}} - 1)}{2}$ unordered pairs of symbols from the alphabet. To a fixed $f$ and pair of symbols, there exists exactly one $f'$ that agrees with $f$ on all but those two symbols, out of a total of $\abs{\mathcal{A}}$ possible ciphers. So, the probability that a uniformly-selected $f'$ matches $f$ on a specified pair of symbols is $\frac{1}{\abs{\mathcal{A}}!}$, and the probability that $f'$ matches $f$ on some pair is 
+		\begin{equation}
+			\frac{\abs{\mathcal{A}}(\abs{\mathcal{A}} - 1) / 2}{\abs{\mathcal{A}}!} = \frac{1}{2 (\abs{\mathcal{A}} - 2)!}\;.
+		\end{equation}
+		What's nice about this result is that, if we construct a proposal Markov chain where ciphers have links between them iff they differ on exactly two symbols, then the neighborhood of a given cipher will be relatively sparse. 
+	\part
+		We can construct a Markov chain whose stationary distribution is the posterior of Problem 1(b) as follows. Let $n(f)$ be the set of ciphers that differ from $f$ in exactly two symbols. Let $V$ our proposed chain be given by the transition probabilities 
+		\begin{equation}
+			\prob(V_t = f'\;|\; V_{t-1} = f) = \begin{cases}\frac{1}{2(\abs{\mathcal{A}} - 2)} & f' \in n(f)\\
+			0 & \text{otherwise}\end{cases}
+		\end{equation}
+		For the remainder of this problem, we'll assume that $f' \in n(f)$. We can then compute the acceptance factor as 
+		\begin{align} 
+			a(f \rightarrow f') &= \min \left\{1, \frac{p_{\mathbf{Y}|F}(\mathbf{y}|f')p_F(f')V(f'|f)}{p_{\mathbf{Y}|F}(\mathbf{y}|f)p_F(f)V(f|f')}  \right\} \\
+			&= \min \left\{1, \frac{p_{\mathbf{Y}|F}(\mathbf{y}|f')}{p_{\mathbf{Y}|F}(\mathbf{y}|f)}  \right\}\;,
+		\end{align}
+		where we have used the fact that the prior $p_F$ and the proposed transition probabilities are uniform. So, the acceptance factor is just a likelihood ratio. So, the modified Markov chain $W$ has transition probabilities for $f' \neq f$ given by 
+		\begin{equation}
+			\prob(W_t = f' \;|\; W_{t - 1} = f) = 
+				V(f'|f) a(f' \rightarrow f) = \frac{1}{2 (\abs{\mathcal{A}} - 2)!} \min \left\{1, \frac{p_{\mathbf{Y}|F}(\mathbf{y}|f')}{p_{\mathbf{Y}|F}(\mathbf{y}|f)}  \right\} \;,
+		\end{equation}
+		and 
+		\begin{equation}
+			\prob(W_t = f \;|\; W_{t - 1} = f) = 1 - \sum_{f' \in n(f), f' \neq f} \prob(W_t = f' \;|\; W_{t - 1} = f)\;.
+		\end{equation}
+	\part
+		An explicit algorithm is: 
+		\begin{algorithm}
+		\caption{Metropolis-Hastings Algorithm for Decoding Ciphertext}\label{euclid}
+		\begin{algorithmic}[1]
+		\Procedure{findCipher}{$mixTime$, $nSamples$}
+			\State $f_0 \gets U[\mathcal{C}]$ \Comment{Initial state, uniform random}
+			\State $i \gets 1$ 
+			\State $n \gets 1$
+			\State $S \gets \{\}$ \Comment{Empty dictionary of samples}
+		\While {$n \leq nSamples$} 
+			\State $\tilde{f}_i \gets U[ne(f_{i-1})] $ \Comment{Uniform random neighbor of $f_{i-1}$}
+			\State $a_i \gets \min \left\{1, \frac{p_{\mathbf{Y}|F}(\mathbf{y}|\tilde{f}_i)}{p_{\mathbf{Y}|F}(\mathbf{y}|f_{i-1})}\right\}$ \Comment{Acceptance probability, using \eqref{one} and \eqref{two}}
+			\State $u \gets ~ U[0,1]$
+			\If {$u \geq a_i$}
+				\State $f_i \gets \tilde{f}_i$
+				\State $i \gets i + 1$
+			\EndIf
+			\If {$i \geq mixTime$} \Comment{If chain is mixed}
+				\State $S[f_i] \gets S[f_i] + 1$ \Comment{Add sample to dict}
+				\State $n \gets n+1$
+			\EndIf
+		\EndWhile
+		\Return $\argmax S$ \Comment{Return the empirical mode of the samples}
+
+		\EndProcedure
+		\end{algorithmic}
+		\end{algorithm}
+
+		
 
 %-----------------------------------------------
 \problem{}
