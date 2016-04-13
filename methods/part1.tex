@@ -1,0 +1,73 @@
+\documentclass{hw}
+
+\title{6.437 Project, Part 1}
+\author{Phil Chodrow}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+
+\newtheorem{thm}{Theorem}
+\newtheorem{lm}{Lemma}
+\newtheorem{cor}{Corrolary}
+\newtheorem{clm}{Claim}
+
+\newtheorem*{thm*}{Theorem}
+\newtheorem*{lm*}{Lemma}
+\newtheorem*{cor*}{Corrolary}
+\newtheorem*{clm*}{Claim}
+
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\newcommand\decision[2]{\underset{#2}{\overset{#1}{\gtreqless}}}
+\newcommand{\argmax}{\operatornamewithlimits{argmax}}
+\newcommand{\argmin}{\operatornamewithlimits{argmin}}
+\newcommand\abs[1]{\left|#1\right|}
+\newcommand\prob[0]{\mathbb{P}}
+\newcommand\E[0]{\mathbb{E}}
+\newcommand\R[0]{\mathbb{R}}
+
+\begin{document}
+
+%-----------------------------------------------
+\problem{}
+	We consider the following cdeciphering problem. Let $\mathbf{X}$ be a random variable representing the plaintext corresponding to an observed ciphertext $\mathbf{Y}$, where $\mathbf{Y} = f(\mathbf{X})$ and $f:\mathcal{A} \rightarrow \mathcal{A}$ is a permutation of the English alphabet $\mathcal{A}$, which includes lowercase letters, spaces, and periods. 
+
+	We assume that the sequence of characters in English text can be approximated as a stationary Markov chain, where the probability of a symbol depends only on the symbol that precedes it. Formally, if we number the symbols of $\mathcal{A}$ from $1$ to $m \abs{\mathcal{A}}$, then 
+	\begin{equation}
+		\prob(X_k = i\;|\; X_{k-1} = j) = M_{ij}\;,
+	\end{equation}
+	where $\mathbf{M}$ is the transition matrix. Furthermore, let the marginal probability of each symbol be given by 
+	\begin{equation}
+		P_i \triangleq \prob(X_k = i), \quad i = 1, 2, \ldots, m\;,
+	\end{equation}
+	and let $\mathbf{P} = [P_i]$ be the vector of marginal probabilities. 
+
+\solution
+	\part
+		Since $f$ is bijective by hypothesis, we can write
+		\begin{align}
+			p_{\mathbf{Y}|F}(\mathbf{y}|f) &= \prob(\mathbf{Y} = \mathbf{y} \;|\; F = f) \\
+			&= \prob(F(\mathbf{X}) = \mathbf{y} \;|\; F = f) \\
+			&= \prob(\mathbf{X} = f^{-1}(\mathbf{y})) \\
+			&= (p_\mathbf{X} \circ f^{-1})(\mathbf{y})\;.
+		\end{align}
+	\part
+		Let $\mathcal{C}$ be the space of permutations of $\mathcal{A}$. Then, $\abs{\mathcal{C}} = \abs{\mathcal{A}}!$, so that $p_F(f) = \frac{1}{\abs{\mathcal{A}}!}$ for all $f$, and we can write 
+		\begin{align}
+			p_{F|\mathbf{Y}}(f|\mathbf{y}) &= \frac{p_{\mathbf{Y}|F}(\mathbf{y}|f)p_F(f)}{p_\mathbf{Y}(\mathbf{y})} \\
+			&= \frac{1}{\abs{\mathcal{A}}!} \frac{(p_\mathbf{X} \circ f^{-1})(\mathbf{y})}{\sum_{f \in \mathcal{C}}(p_\mathbf{X} \circ f^{-1})(\mathbf{y})}
+		\end{align}
+	\part
+		The normalization $p_\mathbf{Y}(\mathbf{y}) = \sum_{f \in \mathcal{C}}(p_\mathbf{X} \circ f^{-1})(\mathbf{y})$ is impractical to calculate, since it involves the evaluation and summation of $\abs{A}! = 28! \approx 10^{29}$ terms.  
+%-----------------------------------------------
+\problem{}
+	
+\solution
+
+%-----------------------------------------------
+\problem{}
+	
+\solution
+
+
+\end{document}
