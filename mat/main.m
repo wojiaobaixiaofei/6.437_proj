@@ -1,43 +1,78 @@
 cd('/Users/phil/Google Drive/classes/6.437J/project/mat')
-
-
 load('example_cipher.mat')      % Load example
 load('language_parameters.mat') % Load parameters
 
-sub = ciphertext(1:3000);
+n_letters = length(ciphertext); 
+% n_iters = 10000;
+likelihood = zeros(1, 1);
+acceptance = zeros(1, 1);
+accuracy = zeros(1, 1);
+decoded = ciphertext(1:n_letters);
 
-c1 = warm_start(ciphertext, letter_probabilities, alphabet);
-
-cipher_function = cipher_function(randperm(length(cipher_function)))
-c1 = cipher(alphabet, cipher_function);
-
-
-for i = 1:10000
+done = zeros(1,1);
+i = 0
+while done == 0
+    i = i + 1; 
     switch1 = randi([1,length(alphabet)]);
     switch2 = randi([1,length(alphabet)]);
     while switch1 == switch2
         switch2 = randi([1,length(alphabet)]);
     end
-    c2 = permute_cipher(c1, alphabet(switch1), alphabet(switch2));
-    t = compare_ciphers(c1, c2, sub, alphabet, letter_probabilities, letter_transition_matrix);
+    candidate = permute_string(decoded, alphabet(switch1), alphabet(switch2));
+    l1 = compute_likelihood(decoded, alphabet, letter_probabilities, letter_transition_matrix);
+    likelihood(i) = l1 / n_letters;
+    
+    l2 = compute_likelihood(candidate, alphabet, letter_probabilities, letter_transition_matrix);
+    t = min(1, exp(l2 - l1));
+    
     a = unifrnd(0,1);
     if a<t
-        c1 = containers.Map(keys(c2), values(c2));
+        acceptance(i) = 1;
+        decoded = candidate;
+    else
+        acceptance(i) = 0;
     end
-    disp(decipher(c1, sub))
+    accuracy(i) = sum(decoded == plaintext(1:n_letters)) / n_letters;
+    
+    if accuracy(i) == 1
+        done = 1;
+    end
+    if mod(i, 100) == 0
+        disp(decoded)
+    end
 end
-% 
-% for i = 1:2000
-%     switch1 = randi([1,length(alphabet)]);
-%     switch2 = randi([1,length(alphabet)]);
-%     while switch1 == switch2
-%         switch2 = randi([1,length(alphabet)]);
-%     end
-%     c2 = permute_cipher(c1, alphabet(switch1), alphabet(switch2));
-%     t = compare_ciphers(c1, c2, ciphertext, alphabet, letter_probabilities, letter_transition_matrix);
-%     a = unifrnd(0,1);
-%     if a<t
-%         c1 = containers.Map(keys(c2), values(c2));
-%     end
-% end
+
+
+
+figure
+
+% Plot the acceptance rate over time
+subplot(3,1,1) 
+plot(log(tsmovavg(acceptance,'s',300)))
+axis([0,inf,-inf,0])
+xlabel('Iteration number')
+ylabel('Log-acceptance rate')
+title('Acceptance rate at each iteration')
+
+
+ 
+% Plot the likelihood of the cipher over time
+subplot(3,1,2)
+plot(likelihood)
+axis([0,inf,-inf,0])
+xlabel('Iteration number')
+ylabel('Log-likelihood of cipher / number of letters')
+title('Log-likelihood of cipher per iteration')
+
+
+% Plot the accuracy
+subplot(3,1,3) 
+plot(accuracy)
+axis([0,inf,0,1])
+xlabel('Iteration number')
+ylabel('Accuracy')
+title('Accuracy of cipher per iteration')
+
+print('summary','-dpng')
+
 
